@@ -1,0 +1,17 @@
+    <actuator>
+        <motor gear="1" joint="FR_hip_joint" name="FR_hip_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="FR_thigh_joint" name="FR_thigh_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="FR_calf_joint" name="FR_calf_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+
+        <motor gear="1" joint="FL_hip_joint" name="FL_hip_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="FL_thigh_joint" name="FL_thigh_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="FL_calf_joint" name="FL_calf_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+
+        <motor gear="1" joint="RR_hip_joint" name="RR_hip_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="RR_thigh_joint" name="RR_thigh_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="RR_calf_joint" name="RR_calf_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+
+        <motor gear="1" joint="RL_hip_joint" name="RL_hip_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="RL_thigh_joint" name="RL_thigh_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/>
+        <motor gear="1" joint="RL_calf_joint" name="RL_calf_motor" forcerange="-35.0 35.0" ctrlrange="-35.0 35.0"/> 
+    </actuator>
