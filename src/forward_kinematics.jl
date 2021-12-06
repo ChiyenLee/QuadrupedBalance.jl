@@ -3,6 +3,12 @@ const y_hip = 0.047
 const Δy_thigh = 0.08505 # thigh displacement from the hip frame 
 const l_limb = 0.2 
 
+"""
+    fk(q::AbstractVector{T})
+        Given joint angles compute the position of feet relative to obody rigin  
+        p = [x_FR, y_FR, z_FR, x_FL, y_FL, z_FL, ...]
+        feet order: FR, FL, RR, RL 
+"""
 function fk(q::AbstractVector)
     q_FR = q[[1,5,9]]
     q_FL = q[[2,6,10]]
@@ -21,6 +27,12 @@ function fk(q::AbstractVector)
     return p
 end
 
+"""
+    fk_world(q::AbstractVector{T})
+        Given full state vectors (dim=37) compute the position of feet relative to obody rigin  
+        p = [x_FR, y_FR, z_FR, x_FL, y_FL, z_FL, ...]
+        feet order: FR, FL, RR, RL 
+"""
 function fk_world(x::AbstractVector)
     q = x[8:19]
     quat = Rotations.UnitQuaternion(x[1:4])
@@ -35,10 +47,22 @@ function fk_world(x::AbstractVector)
     return p_world 
 end 
 
+"""
+    dfk(q::AbstractVector{T})
+        Given joint angles (dim=12) compute the (12 x 12) kinematic jacobian
+        p = [x_FR, y_FR, z_FR, x_FL, y_FL, z_FL, ...]
+        feet order: FR, FL, RR, RL 
+"""
 function dfk(q::AbstractVector)
     return ForwardDiff.jacobian(t->fk(t), q)
 end 
 
+"""
+    fk_world(q::AbstractVector{T})
+        Given full state vectors (dim=37) compute (12 x 37) the kinematic jacobian
+        p = [x_FR, y_FR, z_FR, x_FL, y_FL, z_FL, ...]
+        feet order: FR, FL, RR, RL 
+"""
 function dfk_world(x::AbstractVector)
     return ForwardDiff.jacobian(t->fk_world(t), x)
 end 
