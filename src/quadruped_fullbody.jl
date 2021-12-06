@@ -3,17 +3,17 @@ abstract type AbstractQuadruped <: RobotDynamics.AbstractModel end
 """
     Full body quadruped model
     x = [q; v]
-    q  = [attitude
-          position
-          hip_angle
-          thigh_angle
-          calf_angle]
+    q  = [attitude  [4 x 1]
+          position  [3 x 1]
+          hip_angle [4 x 1]
+          thigh_angle [4 x 1]
+          calf_angle] [4 x 1]
     
-    v = [ang_vel
-         v_trans (body frame)
-         hip_angle
-         thigh_angle
-         calf_angle]
+    v = [ang_vel  [3 x 1]
+         v_trans (body frame) [3 x 1]
+         hip_angle [4 x 1]
+         thigh_angle [4 x 1]
+         calf_angle] [4 x 1]
 """
 
 struct UnitreeA1FullBody <: AbstractQuadruped
