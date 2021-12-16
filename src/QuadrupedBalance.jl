@@ -9,6 +9,7 @@ using LinearAlgebra
 using SparseArrays
 include("rigidbodymodel.jl")
 include("quadruped_fullbody.jl")
+include("centroidal_model.jl")
 include("forward_kinematics.jl")
 include("utils.jl")
 end # module

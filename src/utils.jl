@@ -22,43 +22,31 @@ function mapMotorArrays(cmd1::AbstractVector{Float64}, ids1::MotorIDs, ids2::Mot
 end 
 
 ########################### Math Utilities ###################
-"""Returns the cross product matrix """
-function cross_mat(v)
-    return [0 -v[3] v[2]; v[3] 0 -v[1]; -v[2] -v[1] 0]
-end 
-
 """Given quaternion returns G matrix"""
+const H = [zeros(1,3); I];
+
 function get_G(quat)
     H = [zeros(3) I]'
     return L(quat) * H
 end 
 
 function quaternion_differential(quat)
-    H = [zeros(3) I(3)]' 
     return L(quat) * H
 end 
 
-"""Calculate the adjoint matrix of homogenous transform g"""
-function adj(g)
-    R = g[1:3,1:3]
-    p = g[1:3,end]
-    return [R zeros(3,3); cross_mat(p)*R R]
-    
-end 
-
-"""Calculate the inverse adjoint matrix """
-function adj_inv(g)
-    R = g[1:3,1:3]
-    p = g[1:3,end]
-    return [R' -R'*cross_mat(p); I R']
+# function L(q)
+#     s = q[1]
+#     v = q[2:4]
+#     L = [s    -v';
+#          v  s*I+hat(v)]
+#     return L
+# end
+function L(Q)
+    [Q[1] -Q[2:4]'; Q[2:4] Q[1]*I + hat(Q[2:4])]
 end
 
-function L(q)
-    s = q[1]
-    v = q[2:4]
-    L = [s    -v';
-         v  s*I+hat(v)]
-    return L
+function R(Q)
+    [Q[1] -Q[2:4]'; Q[2:4] Q[1]*I - hat(Q[2:4])]
 end
 
 function hat(v)
@@ -81,6 +69,10 @@ function ζ(v)
 
 end
 
+function ρ(ϕ)
+    q = 1/sqrt(1+norm(ϕ)) * [1;ϕ]
+end
+
 function q_inv(q)
     return [q[1];-q[2:end]]
 end
@@ -89,10 +81,10 @@ end
 
 function dynamics_rk4(model::RobotDynamics.AbstractModel, x,u,h)
     #RK4 integration with zero-order hold on u
-    f1 = dynamics(model, x, u)
-    f2 = dynamics(model, x + 0.5*h*f1, u)
-    f3 = dynamics(model, x + 0.5*h*f2, u)
-    f4 = dynamics(model, x + h*f3, u)
+    f1 = RobotDynamics.dynamics(model, x, u)
+    f2 = RobotDynamics.dynamics(model, x + 0.5*h*f1, u)
+    f3 = RobotDynamics.dynamics(model, x + 0.5*h*f2, u)
+    f4 = RobotDynamics.dynamics(model, x + h*f3, u)
     return x + (h/6.0)*(f1 + 2*f2 + 2*f3 + f4)
 end
 
