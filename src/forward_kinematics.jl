@@ -47,6 +47,7 @@ function fk_world(x::AbstractVector)
     return p_world 
 end 
 
+
 """
     dfk(q::AbstractVector{T})
         Given joint angles (dim=12) compute the (12 x 12) kinematic jacobian
@@ -65,4 +66,29 @@ end
 """
 function dfk_world(x::AbstractVector)
     return ForwardDiff.jacobian(t->fk_world(t), x)
+end 
+
+
+""" 
+     Given foot positions in body frame, find joint positions 
+"""
+function inv_kin(p::AbstractVector, q_guess::AbstractVector; max_iter = 100000)
+    h = 0.1 
+    p_now = fk(q_guess)
+    res = norm(p - p_now)
+    counter = 0 
+    while res > 1e-7 
+        dq = dfk(q_guess)' * (p - p_now)
+        q_guess = q_guess + dq * h 
+
+        p_now = fk(q_guess)
+        res = norm(p - p_now)
+        if counter > max_iter
+            println("did not converge")
+            break
+        end 
+        counter+= 1
+    end 
+
+    return q_guess 
 end 

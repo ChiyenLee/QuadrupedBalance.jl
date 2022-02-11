@@ -29,7 +29,7 @@ function RigidBodyModel(mech::Mechanism)
     return RigidBodyModel{typeof(statecache)}(mech, statecache, dyncache, control_indices)
 end 
 
-RobotDynamics.state_dim(model::RigidBodyModel) = num_positions(model.mech) + num_positions(model.mech)
+RobotDynamics.state_dim(model::RigidBodyModel) = num_positions(model.mech) + num_velocities(model.mech)
 RobotDynamics.control_dim(model::RigidBodyModel) = sum(model.control_indices)
 
 function RobotDynamics.dynamics(model::RigidBodyModel, x::AbstractVector{T1}, u::AbstractVector{T2}) where {T1, T2} 
