@@ -13,5 +13,6 @@ include("quadruped_flywheel.jl")
 include("centroidal_model.jl")
 include("forward_kinematics.jl")
 include("centroidal_pendulum.jl")
+include("simple_sim.jl")
 include("utils.jl")
 end # module

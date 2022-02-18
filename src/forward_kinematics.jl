@@ -35,7 +35,7 @@ end
 """
 function fk_world(x::AbstractVector)
     q = x[8:19]
-    quat = Rotations.UnitQuaternion(x[1:4])
+    quat = Rotations.UnitQuaternion(x[1:4]...)
     pos = x[5:7]
 
     p_body = fk(q)
@@ -73,7 +73,7 @@ end
      Given foot positions in body frame, find joint positions 
 """
 function inv_kin(p::AbstractVector, q_guess::AbstractVector; max_iter = 100000)
-    h = 0.1 
+    h = 10.0
     p_now = fk(q_guess)
     res = norm(p - p_now)
     counter = 0 
