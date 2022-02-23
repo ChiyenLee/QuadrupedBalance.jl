@@ -2,6 +2,9 @@ using StaticArrays
 using OSQP
 using ForwardDiff 
 using Dojo
+using MeshCat 
+using QuadrupedBalance
+const QB = QuadrupedBalance 
 include("dojo_utils.jl")
 mutable struct BalanceControl 
     x_des::Vector # desired state 
@@ -63,15 +66,24 @@ end
 function balance_controller(mechanism, k)
     x = get_minimal_state(mechanism)
     ind_flipped = SVector{12,Int64}([10:12;7:9;4:6;1:3]) # for some reason the indices are flipped 
+    ind_foot_flipped = SVector{4,Int64}([4,3,2,1])
     encs = x[13:end][1:2:end][ind_flipped]
-    pos = x[1:3] - [0.01, 0.0, 0.0]
+    pos = x[1:3] + [-0.01, 0.0, 0.0]
+
+    # controller.x_des[7:10] = QB.ρ([0., 0., y_des[k]])
 
     # error calculation 
     δx = zeros(12)
     δx[1:3] = pos - controller.x_des[1:3] # position
     δx[4:6] = x[7:9]                    # velocity 
-    δx[7:9] = x[4:6]                    # attitude 
-    δx[10:12] = x[10:12]                # angular velocity 
+
+    # δx[7:9] = x[4:6]                    # attitude 
+    rot_vec = RotationVec(x[4:6]...)
+    diff = Rotations.rotation_error(rot_vec, UnitQuaternion(controller.x_des[7:10]...),
+                                    Rotations.CayleyMap())
+    δx[7:9] = -diff               
+              
+
 
     # println(δx[1:3])
 
@@ -83,24 +95,29 @@ function balance_controller(mechanism, k)
 
     W = sparse(R + B' * P_uctg * B )
     q = (B' * P_uctg * A * δx)'
-    # OSQP.setup!(problem, P=W, q=q', A=sparse(consMatrix), l=lb, u=ub, verbose=0, eps_abs=1e-6, eps_rel=1e-6)
-    OSQP.setup!(problem, P=W, q=q', verbose=0, eps_abs=1e-6, eps_rel=1e-6)
+    OSQP.setup!(problem, P=W, q=q', A=sparse(consMatrix), l=lb, u=ub, verbose=0, eps_abs=1e-6, eps_rel=1e-6)
+    # OSQP.setup!(problem, P=W, q=q', verbose=0, eps_abs=1e-6, eps_rel=1e-6)
     results = OSQP.solve!(problem)
     f = results.x  
-    f = -K * δx   
-    println(f)
+    
     rot = RotationVec(x[4:6]...)
     rot = kron(I(4), rot')
     u = -QB.dfk(dojo_to_qb(encs))[:,:]' * rot * (f + controller.f_des) 
     u = qb_to_dojo(u)
+    q_stand_dojo = qb_to_dojo(q_stand)
 
     # extract joints
     leg_joints = mechanism.joints[2:end]
     for i in 1:12
-        set_input!(leg_joints[i], [u[i]]*mechanism.timestep)
+        if contacts[ind_foot_flipped][(i-1) ÷3 + 1] 
+            set_input!(leg_joints[i], [u[i]]*mechanism.timestep)
+        else
+            ui = -200 * (encs[i] - q_stand_dojo[i])
+            set_input!(leg_joints[i], [ui*mechanism.timestep])
+        end 
     end 
     
-
+    println(δx)
 end 
  
 ## Foot placements 
@@ -115,7 +132,9 @@ q_stand = QB.inv_kin([p_FR[1],  p_FR[2], -robot_height,
                       p_RR[1],  p_RR[2], -robot_height,
                       p_RL[1],  p_RL[2], -robot_height], q_guess)
 
+
 ## Initialize model
+I_inertia = Diagonal([0.1,0.25,0.3])
 model = QB.CentroidalModel(I_inertia, m, p_FR, p_FL, p_RR, p_RL)
 
 ## Initialize state and calculate equilibrium pose 
@@ -129,8 +148,8 @@ x_des[3] = robot_height + 0.02
 F_MIN = 5
 F_MAX = 200
 num_legs = 4
-μ = 0.1
-contacts = [true, true, true, true ]
+μ = 0.7
+contacts = [true, false, false, true]
 consMatrix = zeros(num_legs + 4*num_legs, 3*num_legs) # constraint matrix
 lb = zeros(num_legs + 4*num_legs)
 ub = zeros(num_legs + 4*num_legs) 
@@ -164,7 +183,7 @@ f_des = calc_eq_forces(model, x_des)
 h = 0.001 # discretization step
 A = ForwardDiff.jacobian(t->dynamics(model,t, f_des), x_des)
 B = ForwardDiff.jacobian(t->dynamics(model,x_des, t), f_des)
-Ad = A + I*h # super coarse approximate discretizatoin step 
+Ad = A*h + I # super coarse approximate discretizatoin step 
 Bd = B*h 
 G = blockdiag(sparse(1.0I(6)), 
               sparse(QB.quaternion_differential(x_des[7:10])), 
@@ -193,8 +212,8 @@ for i in 1:4
 end 
 
 ## Initialize the controller 
-Q = Matrix(Diagonal([10., 10., 10000., 1.0, 1.0, 10., 1600, 1800, 1500., 10., 5, 1.])) *1e-2
-R = Matrix(Diagonal(kron(ones(4), [0.5, 0.5, .5]))) * 1e-2 
+Q = Matrix(Diagonal([20, 20, 10000., 1.0, 1.0, 10., 2600, 2800, 1500., 10., 5, 1.])) *1e-2
+R = Matrix(Diagonal(kron(ones(4), [0.5, 0.5, .5]))) * 1e-4 
 P_uctg, K = ricatti(Ad,Bd,Q,R) # unconstrained cost to go 
 controller = BalanceControl(x_des, f_des, Ad, Bd, Q, R, P_uctg, h)
 
@@ -207,10 +226,16 @@ vis = Visualizer()
 open(vis)
 
 dt = 0.01 
-tf = 0.5
-controller.x_des[3] = robot_height - 0.2
-mechanism = Dojo.get_mechanism(:quadruped, damper = 1.5,friction_coefficient=0.08, timestep=dt, gravity=-9.81);
-set_state(mechanism, q_stand, [0,0,0.2+0.02], [0.0, 0.0, 0.0])
+tf = 1.5
+times = 0:dt:tf
+
+# generate time sinusoidal trajectory 
+y_des = sin.(times ./ 0.2) * 0.15
+controller.x_des[3] = robot_height + 0.02
+controller.x_des[7:10] = [1.0,0.0,0.0,0.0]
+mechanism = Dojo.get_mechanism(:quadruped, damper = 1.5,friction_coefficient=2.0, timestep=dt, gravity=-9.81);
+set_state(mechanism, q_stand, [-0.01,0,0.2+0.02], [-0.0, 0.0, 0.0])
 storage = simulate!(mechanism, tf, balance_controller, record=true, verbose=false);
 
 Dojo.visualize(mechanism, storage, vis=vis);
+

@@ -116,4 +116,17 @@ function dynamics_jacobians(A1, xf, uf, λf, foot_indices)
     return A, B, C
 end 
 
+function ricatti(A, B, Q, R)
+    P = copy(Q)
+    P_prev = zero(P)
+    K = zeros(size(B'))
+    res = norm(P-P_prev)
+    while res > 1e-7
+        K = (R + B'*P_prev*B)\ B'*P*A
+        P = Q + A'*P_prev*(A-B*K)
+        res = norm(P-P_prev)
+        P_prev = copy(P)
+    end
+    return P, K
+end 
     
